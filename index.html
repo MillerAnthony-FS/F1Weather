@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>F1 Leaderboard & Weather Radar</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"/>
+  <style>
+    :root {
+      --bg-dark: #0e0e10;
+      --bg-light: #1f1f23;
+      --text-light: #ffffff;
+      --accent: #ff4655;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-light);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    h1, h2 {
+      color: var(--accent);
+      text-align: center;
+    }
+
+    section {
+      padding: 1rem 2rem;
+      background-color: var(--bg-light);
+      margin: 0.5rem auto;
+      width: 90%;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(255, 70, 85, 0.2);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+      font-size: 0.95rem;
+    }
+
+    th, td {
+      padding: 0.6rem;
+      border: 1px solid #333;
+      text-align: center;
+    }
+
+    th {
+      background-color: #292929;
+      color: var(--accent);
+    }
+
+    #map {
+      height: 500px;
+      border-radius: 10px;
+      margin-top: 1rem;
+      box-shadow: 0 0 10px rgba(0,0,0,0.4);
+    }
+
+    @media (max-width: 768px) {
+      section {
+        padding: 1rem;
+        width: 95%;
+      }
+
+      table, th, td {
+        font-size: 0.85rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>F1 Leaderboard, Lap Data & Weather Radar</h1>
+  <section id="leaderboard">
+    <h2>Live Leaderboard</h2>
+    <div id="leaderboard-table">Loading...</div>
+  </section>
+  <section id="lapdata">
+    <h2>Live Lap Data</h2>
+    <div id="lap-table">Loading...</div>
+  </section>
+  <section>
+    <h2>Weather Radar & Car Positions</h2>
+    <div id="map"></div>
+  </section>
+
+  <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
