@@ -3,93 +3,208 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>F1 Leaderboard & Weather Radar</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"/>
+  <title>F1 Live Leaderboard + Track Map</title>
   <style>
-    :root {
-      --bg-dark: #0e0e10;
-      --bg-light: #1f1f23;
-      --text-light: #ffffff;
-      --accent: #ff4655;
-    }
-
     body {
       margin: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: var(--bg-dark);
-      color: var(--text-light);
-      display: flex;
-      flex-direction: column;
-      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      background-color: #111;
+      color: #fff;
+      padding: 1rem;
     }
-
-    h1, h2 {
-      color: var(--accent);
+    .container {
+      max-width: 1200px;
+      margin: auto;
+    }
+    h1 {
       text-align: center;
+      font-size: 2rem;
+      margin-bottom: 1rem;
     }
-
-    section {
-      padding: 1rem 2rem;
-      background-color: var(--bg-light);
-      margin: 0.5rem auto;
-      width: 90%;
-      border-radius: 8px;
-      box-shadow: 0 0 10px rgba(255, 70, 85, 0.2);
+    .no-race {
+      text-align: center;
+      color: #888;
+      margin: 1rem 0;
     }
-
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 1rem;
-      font-size: 0.95rem;
+      margin-bottom: 2rem;
     }
-
     th, td {
-      padding: 0.6rem;
-      border: 1px solid #333;
-      text-align: center;
+      padding: 0.5rem;
+      text-align: left;
     }
-
     th {
-      background-color: #292929;
-      color: var(--accent);
+      background: #333;
     }
-
-    #map {
-      height: 500px;
-      border-radius: 10px;
-      margin-top: 1rem;
-      box-shadow: 0 0 10px rgba(0,0,0,0.4);
+    tr:not(:first-child) {
+      border-top: 1px solid #444;
     }
-
-    @media (max-width: 768px) {
-      section {
-        padding: 1rem;
-        width: 95%;
-      }
-
-      table, th, td {
-        font-size: 0.85rem;
-      }
+    .driver {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .driver img {
+      border-radius: 50%;
+    }
+    .flag {
+      border-radius: 3px;
+    }
+    #track-map {
+      position: relative;
+      width: 100%;
+      max-width: 1000px;
+      height: 600px;
+      margin: auto;
+      background-image: url("https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/Circuit_Silverstone.png/800px-Circuit_Silverstone.png");
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      border: 2px solid #333;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .driver-dot {
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      text-align: center;
+      font-size: 10px;
+      line-height: 18px;
+      font-weight: bold;
+      color: white;
+      transform: translate(-50%, -50%);
     }
   </style>
 </head>
 <body>
-  <h1>F1 Leaderboard, Lap Data & Weather Radar</h1>
-  <section id="leaderboard">
-    <h2>Live Leaderboard</h2>
-    <div id="leaderboard-table">Loading...</div>
-  </section>
-  <section id="lapdata">
-    <h2>Live Lap Data</h2>
-    <div id="lap-table">Loading...</div>
-  </section>
-  <section>
-    <h2>Weather Radar & Car Positions</h2>
-    <div id="map"></div>
-  </section>
+  <div class="container">
+    <h1>🏁 F1 Live Race Leaderboard & Map</h1>
+    <div id="fallback" class="no-race">Waiting for live race data...</div>
 
-  <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
-  <script type="module" src="./main.js"></script>
+    <table id="leaderboard" style="display: none;">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Driver</th>
+          <th>Number</th>
+          <th>Team</th>
+          <th>Interval</th>
+        </tr>
+      </thead>
+      <tbody id="leaderboard-body"></tbody>
+    </table>
+
+    <div id="track-map"></div>
+  </div>
+
+  <script>
+    const ws = new WebSocket("wss://api.openf1.org/live");
+
+    const table = document.getElementById("leaderboard");
+    const tbody = document.getElementById("leaderboard-body");
+    const fallback = document.getElementById("fallback");
+    const mapContainer = document.getElementById("track-map");
+
+    const driversMap = {};
+    const positions = {};
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+
+      data.forEach((entry) => {
+        const num = entry.driver_number;
+
+        if (
+          num &&
+          entry.driver_name &&
+          entry.team_name &&
+          entry.position &&
+          entry.team_colour &&
+          entry.interval &&
+          entry.driver_headshot_url &&
+          entry.country_code
+        ) {
+          driversMap[num] = {
+            position: parseInt(entry.position),
+            number: num,
+            name: entry.driver_name,
+            team: entry.team_name,
+            color: entry.team_colour,
+            interval: entry.interval,
+            photo: entry.driver_headshot_url,
+            flag: entry.country_code.toLowerCase(),
+          };
+        }
+
+        if (entry.x !== undefined && entry.y !== undefined) {
+          positions[num] = {
+            x: entry.x,
+            y: entry.y,
+          };
+        }
+      });
+
+      const drivers = Object.values(driversMap);
+      if (drivers.length === 0) return;
+
+      drivers.sort((a, b) => a.position - b.position);
+      fallback.style.display = "none";
+      table.style.display = "table";
+
+      tbody.innerHTML = drivers
+        .map(
+          (d) => `
+        <tr>
+          <td>${d.position}</td>
+          <td>
+            <div class="driver">
+              <img src="${d.photo}" alt="${d.name}" width="32" height="32"/>
+              <img src="https://flagcdn.com/w40/${d.flag}.png" alt="flag" class="flag" width="24" height="16"/>
+              ${d.name}
+            </div>
+          </td>
+          <td>${d.number}</td>
+          <td style="color: ${d.color};">${d.team}</td>
+          <td>${d.interval}</td>
+        </tr>`
+        )
+        .join("");
+
+      updateTrackMap(drivers);
+    };
+
+    function updateTrackMap(drivers) {
+      mapContainer.innerHTML = "";
+
+      drivers.forEach((d) => {
+        const pos = positions[d.number];
+        if (!pos) return;
+
+        const dot = document.createElement("div");
+        dot.className = "driver-dot";
+        dot.style.backgroundColor = d.color;
+        dot.textContent = d.number;
+
+        const x = pos.x * mapContainer.clientWidth;
+        const y = (1 - pos.y) * mapContainer.clientHeight;
+
+        dot.style.left = `${x}px`;
+        dot.style.top = `${y}px`;
+
+        mapContainer.appendChild(dot);
+      });
+    }
+
+    ws.onerror = () => {
+      fallback.innerText = "Error connecting to OpenF1 API.";
+    };
+    ws.onclose = () => {
+      fallback.innerText = "Connection to live data closed.";
+    };
+  </script>
 </body>
 </html>
